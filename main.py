@@ -1,27 +1,40 @@
 import os
 import re
-import json
 import pytz
 import requests
 import threading
 import telebot
 from datetime import datetime, time
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 BOT_TOKEN = "8839060416:AAF2Ie6pE4_gfWPk-WdVDfDzHaTO3yf6jHc"
 ADMIN_ID = 6454550864  
 AUDIO_URL = "https://www.islam4u.com/sites/default/files/adiieh/%D8%AF%D8%B9%D8%A7%D8%A1%20%D8%A7%D9%84%D8%B9%D9%87%D8%AF%20%D8%A8%D8%B5%D9%88%D8%AA%20%D8%A7%D9%84%D9%82%D8%A7%D8%B1%D8%A6%20%D8%A7%D9%84%D8%B3%D9%8A%D8%AF%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D8%AD%D9%84%D9%8A%D9%85%20%D8%A7%D9%84%D9%86%D9%88%D8%B1%D8%A7%D9%86%D9%8A.mp3"
+FIREBASE_URL = "https://al-ahad-a43d8-default-rtdb.firebaseio.com/users"
+
 bot = telebot.TeleBot(BOT_TOKEN)
 TZ_BAGHDAD = pytz.timezone("Asia/Baghdad")
-DATA_FILE = "users_data.json"
+
 def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+    try:
+        response = requests.get(f"{FIREBASE_URL}.json", timeout=10)
+        if response.status_code == 200 and response.json():
+            return response.json()
+    except Exception as e:
+        print(f"خطأ في جلب البيانات: {e}")
     return {}
 
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    try:
+        requests.put(f"{FIREBASE_URL}.json", json=data, timeout=10)
+    except Exception as e:
+        print(f"خطأ في حفظ البيانات: {e}")
+
+def update_user_field(user_id, user_data):
+    try:
+        requests.patch(f"{FIREBASE_URL}/{user_id}.json", json=user_data, timeout=10)
+    except Exception as e:
+        print(f"خطأ في تحديث بيانات المستخدم: {e}")
 
 def get_dates():
     url = "https://www.sistani.org"
@@ -50,9 +63,9 @@ DUAA_TEXT = """
 
 اَللَّهُمَّ رَبَّ النُّورِ الْعَظِيمِ وَرَبَّ الْكُرْسِيِّ الرَّفِيعِ وَرَبَّ الْبَحْرِ الْمَسْجُورِ وَمُنْزِلَ التَّوْرَاةِ وَالإِنْجِيلِ وَالزَّبُورِ وَرَبَّ الظِّلِّ وَالْحَرُورِ وَمُنْزِلَ الْقُرْآنِ العَظِيمِ وَرَبَّ الْمَلائِكَةِ الْمُقَرَّبِينَ وَالأَنْبِيَاءِ وَالْمُرْسَلِينَ.
 
-اَللَّهُمَّ إِنِّي أَسْأَلُكَ بِوَجْهِكَ الْكَرِيمِ وَبِنُورِ وَجْهِكَ الْمُنِيرِ وَمُلْكِكَ القَدِيمِ، يَا حَيُّ يَا قَيُّومُ أَسْأَلُكَ بِاسْمِكَ الَّذِي أَشْرَقَتْ بِهِ السَّمَاوَاتُ وَالأَرَضُونَ وَبِاسْمِكَ الَّذِي يَصْلُحُ بِهِ الأوَّلُونَ وَالآخِرُونَ، يَا حَيًّا قَبْلَ كُلِّ حَيٍّ وَيَا حَيًّا بَعْدَ كُلِّ حَيٍّ وَيَا حَيًّا حِينَ لا حَيَّ يَا مُحْيِيَ الْمَوْتَى وَمُمِيتَ الأَحْيَاءِ يَا حَيُّ لا إِلَهَ إِلَّا أَنْتَ.
+اَللَّهُمَّ إِنِّي أَسْأَلُكَ بِوَجْهِكَ الْكَرِيمِ وَبِنُورِ وَجْهِكَ الْمُنِيرِ وَمُلْكِكَ القَدِيمِ، يَا حَيُّ يَا قَيُّومُ أَسْأَلُكَ بِاسْمِكَ الَّذِي أَشْرَقَتْ بِهِ السَّمَاوَاتُ وَالأَرَضُونَ وَبِاسْمِكَ الَّذِي يَصْلُحُ بِهِ الأوَّلُونَ وَالآخِرُونَ، يَا حَيًّا قَبْلَ كُلِّ حَيٍّ وَيَا حَيًّا بَعْدَ كُلِّ حَيٍّ وَيَا حَيًّا حِينَ لا حَيَّ يَا مُحْيِيَ الْمَوْتَى وَمُمِيتَ الأَحْياءِ يَا حَيُّ لا إِلَهَ إِلَّا أَنْتَ.
 
-اَللَّهُمَّ بَلِّغْ مَوْلانَا الإِمَامَ الْهَادِيَ الْمَهْدِيَّ الْقَائِمَ بِأَمْرِكَ ـ صَلوَاتُ اللهِ عَلَيْهِ وَعَلَى آبَائِهِ الطَّاهِرِينَ ـ عَنْ جَمِيعِ الْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ فِي مَشَارِقِ الأَرْضِ وَمَغَارِبِهَا سَهْلِهَا وَجَبَلِهَا وَبَرِّهَا وَبَحْرِهَا وَعَنِّي وَعَن وَّالِدَيَّ مِنَ الصَّلَوَاتِ زِنَةَ عَرْشِ اللهِ وَمِدَادَ كَلِمَاتِهِ وَمَا أحْصَاهُ عِلْمُهُ وَأَحَاطَ بِهِ كِتَابُهُ.
+اَللَّهُمَّ بَلِّغْ مَوْلانَا الإِمَامَ الْهَادِيَ الْمَهْدِيَّ الْقَائِمَ بِأَمْرِكَ ـ صَلوَاتُ اللهِ عَلَيْهِ وَعَلَى آبَائِهِ الطَّاهِرِينَ ـ عَنْ جَمِيعِ الْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ فِي مَشَارِقِ الأَرْضِ وَمَغَارِبهَا سَهْلِهَا وَجَبَلِهَا وَبَرِّهَا وَبَحْرِهَا وَعَنِّي وَعَن وَّالِدَيَّ مِنَ الصَّلَوَاتِ زِنَةَ عَرْشِ اللهِ وَمِدَادَ كَلِمَاتِهِ وَمَا أحْصَاهُ عِلْمُهُ وَأَحَاطَ بِهِ كِتَابُهُ.
 
 اَللَّهُمَّ إِنِّي أُجَدِّدُ لَهُ فِي صَبِيحةِ يَوْمِي هَذَا وَمَا عِشْتُ مِنْ أَيَّامِي عَهْداً وَعَقْداً وَبَيْعَةً لَهُ فِي عُنُقِي لا أَحُولُ عَنْهَا وَلا أَزُولُ أَبَداً.
 
@@ -71,9 +84,11 @@ DUAA_TEXT = """
 <blockquote><b>ثمّ تضرب على فخذك الأيمن بيدك ثلاث مرّات وتقول كلّ مرّة:</b>
 الْعَجَلَ الْعَجَلَ يَا مَوْلايَ يَا صَاحِبَ الزَّمَانِ.</blockquote>
 """
+
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
     user_id = str(message.from_user.id)
+    username = message.from_user.username or ""
     data = load_data()
     
     if user_id not in data:
@@ -83,9 +98,10 @@ def start_cmd(message):
             "cycles": 0,
             "last_read_date": "",
             "today_sent": False,
-            "last_msg_id": None
+            "last_msg_id": None,
+            "username": username
         }
-        save_data(data)
+        update_user_field(user_id, data[user_id])
 
     user = data[user_id]
     is_active = user["active"]
@@ -104,11 +120,126 @@ def start_cmd(message):
         f"<blockquote>📊 <b>إحصائياتك الحالية (من قاعدة البيانات):</b>\n"
         f"• عدد أيام القراءة المتتالية: <b>{user['streak']}/40</b>\n"
         f"• دورات القراءة المكتملة: <b>{user['cycles']}</b>\n"
-        f"• آخر تاريخ تسجيل: <b>{user['last_read_date'] if user['last_read_date'] else 'لم يسجل بعد'}</b></blockquote>\n\n"
+        f"• آخر تاريخ تسجيل: <b>{user.get('last_read_date') if user.get('last_read_date') else 'لم يسجل بعد'}</b></blockquote>\n\n"
         f"ℹ️ يُرسل الدعاء يومياً الساعة <b>5:00 صباحاً</b>، ومهلة التسجيل تنتهي الساعة <b>11:00 صباحاً</b>.\n"
         f"في حال فاتك الوقت ولم تسجل يتم تصفير عدد قراءاتك . "
     )
     bot.send_message(message.chat.id, msg, reply_markup=markup, parse_mode="HTML")
+# معالجة أزرار التحكم بالعدادات
+# معالجة أزرار التحكم بالعدادات
+@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_"))
+def admin_callbacks(call):
+    if call.from_user.id != ADMIN_ID:
+        return
+    
+    # قائمة خيارات التحكم بالعدادات
+    if call.data == "admin_control" or call.data == "admin_cancel":
+        # مسح أية حالة تعيين سابقة عند الرجوع أو الإلغاء
+        admin_states.pop(call.from_user.id, None)
+        
+        markup = InlineKeyboardMarkup()
+        markup.add(
+            InlineKeyboardButton("➕ إضافة أيام", callback_data="admin_action_add_streak"),
+            InlineKeyboardButton("➖ خصم أيام", callback_data="admin_action_sub_streak")
+        )
+        markup.add(
+            InlineKeyboardButton("➕ إضافة دورات", callback_data="admin_action_add_cycles"),
+            InlineKeyboardButton("➖ خصم دورات", callback_data="admin_action_sub_cycles")
+        )
+        markup.add(
+            InlineKeyboardButton("🔄 تصفير الأيام", callback_data="admin_action_reset_streak"),
+            InlineKeyboardButton("🗑 تصفير الدورات", callback_data="admin_action_reset_cycles")
+        )
+        
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text="🛠 <b>اختر الإجراء المطلوب للتحكم بالعدادات:</b>",
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+        
+    # اختيار إجراء معين (إضافة / خصم)
+    elif call.data.startswith("admin_action_"):
+        action = call.data.replace("admin_action_", "")
+        admin_states[call.from_user.id] = {"action": action}
+        
+        labels = {
+            "add_streak": "إضافة أيام قراءة",
+            "sub_streak": "خصم أيام قراءة",
+            "add_cycles": "إضافة دورات",
+            "sub_cycles": "خصم دورات",
+            "reset_cycles": "تصفير دورات مستخدم"
+        }
+        
+        # زر الرجوع / الإلغاء
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("🔙 رجوع / إلغاء", callback_data="admin_cancel"))
+        
+        text = (
+            f"📝 <b>أنت الآن تقوم بـ ({labels.get(action)}):</b>\n\n"
+            f"يرجى إرسال الآيدي والعدد بفاصلة مسافة بالشكل التالي:\n"
+            f"<code>الآيدي العدد</code>\n\n"
+            f"مثال:\n<code>6454550864 5</code>"
+        )
+        
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+# استقبال مدخلات التعديل من الأدمن
+@bot.message_handler(func=lambda message: message.from_user.id == ADMIN_ID and message.from_user.id in admin_states)
+def process_admin_input(message):
+    action_info = admin_states.pop(message.from_user.id, None)
+    if not action_info:
+        return
+    
+    try:
+        parts = message.text.strip().split()
+        target_id = parts[0]
+        value = int(parts[1])
+        
+        data = load_data()
+        if target_id not in data or not isinstance(data[target_id], dict):
+            bot.reply_to(message, "❌ هذا المستخدم غير موجود في قاعدة البيانات!")
+            return
+        
+        user = data[target_id]
+        action = action_info["action"]
+        
+        if action == "add_streak":
+            user["streak"] = user.get("streak", 0) + value
+        elif action == "sub_streak":
+            user["streak"] = max(0, user.get("streak", 0) - value)
+        elif action == "add_cycles":
+            user["cycles"] = user.get("cycles", 0) + value
+        elif action == "sub_cycles":
+            user["cycles"] = max(0, user.get("cycles", 0) - value)
+        elif action == "reset_streak":
+            user["streak"] = 0
+        elif action == "reset_cycles":
+            user["cycles"] = 0    
+        update_user_field(target_id, user)
+        uname = f"@{user.get('username')}" if user.get('username') else "بدون يوزر"
+        bot.reply_to(
+            message,
+            f"✅ <b>تم التعديل بنجاح!</b>\n\n"
+            f"<blockquote>"
+            f"• <b>اليوزر:</b> {uname}\n"
+            f"  └ <b>الآيدي:</b> <code>{target_id}</code>\n"
+            f"  └ <b>القراءات الحالية:</b> <code>{user.get('streak', 0)}/40</code> يوم\n"
+            f"  └ <b>الدورات الحالية:</b> <code>{user.get('cycles', 0)}</code> دورة"
+            f"</blockquote>",
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        bot.reply_to(message, f"❌ حدث خطأ أثناء التعديل، التأكد من إدخال البيانات بصورة صحيحة (آيدي ثم مسافة ثم العدد).\nالخطأ: {e}")
+# متغيرا للتفاعل مع إدخال الأدمن للتحكم
+admin_states = {}
 
 @bot.message_handler(commands=['admin'])
 def admin_stats(message):
@@ -117,17 +248,63 @@ def admin_stats(message):
     
     data = load_data()
     total_users = len(data)
-    active_users = sum(1 for u in data.values() if u.get("active"))
+    active_users = sum(1 for u in data.values() if u.get("active") if isinstance(u, dict))
     
-    report = f"📊 <b>إحصائيات بوت دعاء العهد الشاملة</b>\n\n"
-    report += f"👥 إجمالي المستخدمين: <b>{total_users}</b>\n"
-    report += f"🔔 المشتركين الفاعلين: <b>{active_users}</b>\n\n"
+    total_streaks = sum(u.get("streak", 0) for u in data.values() if isinstance(u, dict))
+    total_cycles = sum(u.get("cycles", 0) for u in data.values() if isinstance(u, dict))
+    
+    top_streak_user = None
+    top_streak_val = -1
+    top_cycle_user = None
+    top_cycle_val = -1
+    
+    for uid, uinfo in data.items():
+        if not isinstance(uinfo, dict):
+            continue
+        streak = uinfo.get("streak", 0)
+        cycles = uinfo.get("cycles", 0)
+        
+        if streak > top_streak_val:
+            top_streak_val = streak
+            top_streak_user = (uid, uinfo.get("username", "بدون يوزر"))
+            
+        if cycles > top_cycle_val:
+            top_cycle_val = cycles
+            top_cycle_user = (uid, uinfo.get("username", "بدون يوزر"))
+
+    report = "📊 <b>إحصائيات بوت دعاء العهد الشاملة</b>\n\n"
+    report += (
+        "<blockquote>"
+        f"👥 إجمالي المستخدمين: <b>{total_users}</b>\n"
+        f"🔔 المشتركين الفاعلين: <b>{active_users}</b>\n"
+        f"📖 إجمالي القراءات المسجلة: <b>{total_streaks}</b>\n"
+        f"🔄 إجمالي الدورات المكتملة: <b>{total_cycles}</b>"
+        "</blockquote>\n\n"
+    )
+    
+    if top_streak_user and top_streak_val >= 0:
+        uname = f"@{top_streak_user[1]}" if top_streak_user[1] != "بدون يوزر" else "بدون يوزر"
+        report += f"🏆 <b>الأعلى بالقراءات:</b> {uname} (<code>{top_streak_user[0]}</code>) بـ <b>{top_streak_val}</b> يوم\n\n"
+    if top_cycle_user and top_cycle_val >= 0:
+        uname = f"@{top_cycle_user[1]}" if top_cycle_user[1] != "بدون يوزر" else "بدون يوزر"
+        report += f"🥇 <b>الأعلى بالدورات:</b> {uname} (<code>{top_cycle_user[0]}</code>) بـ <b>{top_cycle_val}</b> دورة\n\n"
+        
     report += "📋 <b>تفاصيل المشتركين:</b>\n"
     
     for uid, uinfo in data.items():
-        report += f"• المستخدم <code>{uid}</code>: الأيام ({uinfo['streak']}/40) | الدورات ({uinfo['cycles']})\n"
+        if isinstance(uinfo, dict):
+            uname = f"@{uinfo.get('username')}" if uinfo.get('username') else "بدون يوزر"
+            report += (
+                f"• <b>اليوزر:</b> {uname}\n"
+                f"  └ <b>الآيدي:</b> <code>{uid}</code>\n"
+                f"  └ <b>القراءات:</b> <code>{streak}/40</code> يوم\n"
+                f"  └ <b>الدورات:</b> <code>{cycles}</code> دورة\n\n"
+            )
         
-    bot.send_message(message.chat.id, report, parse_mode="HTML")
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("⚙️ التحكم بالعدادات", callback_data="admin_control"))
+    
+    bot.send_message(message.chat.id, report, reply_markup=markup, parse_mode="HTML")
 
 @bot.message_handler(commands=['test'])
 def test_send_cmd(message):
@@ -154,8 +331,8 @@ def test_send_cmd(message):
                 f"<blockquote>{DUAA_TEXT}</blockquote>\n\n"
                 f"📅 <b>التاريخ:</b> {date_info}\n"
                 f"⏰ <b>الوقت:</b> {time_12h}\n"
-                f"📊 <b>عدد أيام القراءة المتتالية:</b> {uinfo['streak']}/40\n"
-                f"🔄 <b>عدد دورات القراءة المكتملة:</b> {uinfo['cycles']}"
+                f"📊 <b>عدد أيام القراءة المتتالية:</b> {uinfo.get('streak', 0)}/40\n"
+                f"🔄 <b>عدد دورات القراءة المكتملة:</b> {uinfo.get('cycles', 0)}"
             )
             
             try:
@@ -190,7 +367,7 @@ def callback_handler(call):
             "last_read_date": "",
             "today_sent": False
         }
-        save_data(data)
+        update_user_field(user_id, data[user_id])
 
     if call.data == "expired":
         bot.answer_callback_query(call.id, " انتهى وقت التسجيل الخاص بهذه الجلسة!", show_alert=True)
@@ -198,7 +375,7 @@ def callback_handler(call):
 
     if call.data == "toggle_active":
         data[user_id]["active"] = not data[user_id]["active"]
-        save_data(data)
+        update_user_field(user_id, data[user_id])
         
         status = "تم تفعيل التذكير بنجاح! 🔔" if data[user_id]["active"] else "تم إيقاف التذكير 🔕"
         bot.answer_callback_query(call.id, status, show_alert=True)
@@ -213,20 +390,20 @@ def callback_handler(call):
         today_str = now.strftime("%Y-%m-%d")
         
         user = data[user_id]
-        if user["last_read_date"] == today_str:
+        if user.get("last_read_date") == today_str:
             bot.answer_callback_query(call.id, "لقد قمت بتسجيل قراءة اليوم بالفعل! ✨", show_alert=True)
             return
 
-        user["streak"] += 1
+        user["streak"] = user.get("streak", 0) + 1
         user["last_read_date"] = today_str
         
         msg_suffix = ""
         if user["streak"] >= 40:
-            user["cycles"] += 1
+            user["cycles"] = user.get("cycles", 0) + 1
             user["streak"] = 0
             msg_suffix = f"\n\n <blockquote>🎉مبروك! تم إكمال 40 يوماً بنجاح وتم بدء دورة جديدة!</blockquote>\nعدد دوراتك الان: {user['cycles']}"
 
-        save_data(data)
+        update_user_field(user_id, user)
         
         date_info = get_dates()
         time_12h = now.strftime("%I:%M %p")
@@ -257,7 +434,6 @@ def daily_scheduler():
         now = datetime.now(TZ_BAGHDAD)
         today_str = now.strftime("%Y-%m-%d")
         
-        # 1. إرسال الدعاء اليومي الساعة 5:00 صباحاً
         if now.hour == 5 and now.minute == 00:
             data = load_data()
             date_info = get_dates()
@@ -280,24 +456,23 @@ def daily_scheduler():
                     
                     msg = (
                         f"{DUAA_TEXT}\n\n"
-                        f"📅 <blockquote>التاريخ:</blockquote> {date_info}\n"
-                        f"⏰ <b>الوقت:</b> {time_12h}\n"
-                        f"📊 <blockquote>عدد أيام القراءة المتتالية:</blockquote> {uinfo.get('streak', 0)}/40\n"
-                        f"🔄 <blockquote>عدد دورات القراءة المكتملة:</blockquote> {uinfo.get('cycles', 0)}"
+                        f" <blockquote>التاريخ:</blockquote> {date_info}\n"
+                        f"<b>الوقت:</b> {time_12h}\n"
+                        f"<blockquote> عدد أيام القراءة المتتالية: {uinfo.get('streak', 0)}/40 </blockquote> \n"
+                        f"<blockquote>عدد دورات القراءة المكتملة: {uinfo.get('cycles', 0)}</blockquote>"
                     )
                     
                     try:
                         sent_msg = bot.send_message(int(uid), msg, reply_markup=markup, parse_mode="HTML")
                         uinfo["last_msg_id"] = sent_msg.message_id
                         uinfo["last_sent_date"] = today_str
+                        update_user_field(uid, uinfo)
                     except Exception as e:
                         print(f"تعذر إرسال النص لـ {uid}: {e}")
                         
             if send_occurred:
-                save_data(data)
-                t_module.sleep(120)
+                t_module.sleep(3)
 
-        # 2. قفل الأزرار وتصفير الستريك الساعة 10:58 صباحاً
         if now.hour == 10 and now.minute == 58:
             data = load_data()
             reset_occurred = False
@@ -307,17 +482,15 @@ def daily_scheduler():
                     if uinfo.get("last_reset_date") == today_str:
                         continue
                         
-                    # التحقق مما إذا كان لم يقرأ اليوم (بغض النظر عن قيمة الستريك)
                     if uinfo.get("last_read_date") != today_str:
                         reset_occurred = True
                         
-                        # تصفير الستريك إذا كان أكبر من صفر
                         if uinfo.get("streak", 0) > 0:
                             uinfo["streak"] = 0
                             
                         uinfo["last_reset_date"] = today_str
+                        update_user_field(uid, uinfo)
                         
-                        # قفل زر التسجيل في الرسالة السابقة
                         if uinfo.get("last_msg_id"):
                             try:
                                 expired_markup = InlineKeyboardMarkup()
@@ -326,7 +499,6 @@ def daily_scheduler():
                             except Exception as ex:
                                 print(f"تعذر قفل زر الرسالة لـ {uid}: {ex}")
 
-                        # إرسال إشعار التصفير/انتهاء المهلة
                         try:
                             bot.send_message(
                                 int(uid), 
@@ -337,10 +509,10 @@ def daily_scheduler():
                             print(f"خطأ في إرسال إشعار التصفير لـ {uid}: {e}")
                             
             if reset_occurred:
-                save_data(data)
-                t_module.sleep(120)
+                t_module.sleep(60)
 
         t_module.sleep(15)
+
 threading.Thread(target=daily_scheduler, daemon=True).start()
-print("البوت يعمل بكفاءة الآن...")
+print("البوت يعمل بكفاءة الآن وقاعدة البيانات مربطوة بـ Firebase...")
 bot.infinity_polling()
